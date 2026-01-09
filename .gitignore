@@ -1,7 +1,17 @@
+# Tags
 tags
-test.sh
-.luarc.json
-nvim
 
+# Local scripts
+test.sh
+
+# Lua tooling (optional)
+.luarc.json
+
+# Spell files (generated)
 spell/
-lazy-lock.json
+
+# lazy.nvim bootstrap (generated)
+lazy/
+
+# OS junk
+.DS_Store

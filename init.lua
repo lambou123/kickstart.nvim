@@ -196,6 +196,10 @@ vim.keymap.set('n', '<leader>vv', '<C-w>v', { desc = 'Split window vertically' }
 vim.keymap.set('n', '<leader>vs', '<C-w>s', { desc = 'Split window horizontally' })
 vim.keymap.set('n', '<leader>dd', '<C-w>q', { desc = 'Close window' })
 
+-- NeoTree KeyBindings
+vim.keymap.set('n', '<leader>e', ':Neotree reveal<CR>', { desc = 'Reveal file in Neo-tree' })
+--
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -485,7 +489,7 @@ require('lazy').setup({
       -- Mason must be loaded before its dependents so we need to set it up here.
       -- NOTE: `opts = {}` is the same as calling `require('mason').setup({})`
       { 'williamboman/mason.nvim', opts = {} },
-      'williamboman/mason-lspconfig.nvim',
+      { 'williamboman/mason-lspconfig.nvim', opts = {} },
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
       -- Useful status updates for LSP.
@@ -701,6 +705,8 @@ require('lazy').setup({
               -- diagnostics = { disable = { 'missing-fields' } },
             },
           },
+          ts_ls = {}, --  renamed from tsserver
+          pyright = {},
         },
       }
 
@@ -718,29 +724,107 @@ require('lazy').setup({
       -- You can add other tools here that you want Mason to install
       -- for you, so that they are available from within Neovim.
       --local ensure_installed = vim.tbl_keys(servers or {})
+
+      --      local ensure_installed = vim.tbl_filter(function(key)
+      --        return key ~= 'nushell'
+      --      end, vim.tbl_keys(servers or {}))
+      --      vim.list_extend(ensure_installed, {
+      --        'stylua', -- Used to format Lua code
+      --      })
+      --      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
+      --
+      --      require('mason-lspconfig').setup {
+      --        ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
+      --        automatic_installation = false,
+      --        handlers = {
+      --          function(server_name)
+      --            local server = servers[server_name] or {}
+      --            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+      --            require('lspconfig')[server_name].setup(server)
+      --          end,
+      --        },
+      --      }
+      --
+      --    local capabilities = vim.lsp.protocol.make_client_capabilities()
+      --
+      --    require("mason-lspconfig").setup_handlers({
+      --        function(server_name)  -- default handler for all servers
+      --            local server = servers[server_name] or {}
+      --            server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
+      --            require("lspconfig")[server_name].setup(server)
+      --        end,
+      --    })
+
+      -- =========================
+      --  LSP Capabilities
+      -- =========================
+      -- local capabilities = vim.lsp.protocol.make_client_capabilities()
+      -- Uncomment if using nvim-cmp for autocompletion
+      -- capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
+
+      -- =========================
+      --  Define LSP Servers
+      -- =========================
+      --     local servers = {
+      --       nushell = {
+      --         cmd = { 'nushell-lsp' },
+      --         settings = {},
+      --       },
+      --       -- Add more servers here, e.g.:
+      --       -- pyright = {},
+      --       -- tsserver = {},
+      --     }
+
+      -- =========================
+      --  Prepare Mason Tools
+      -- =========================
       local ensure_installed = vim.tbl_filter(function(key)
         return key ~= 'nushell'
-      end, vim.tbl_keys(servers or {}))
+      end, vim.tbl_keys(servers))
       vim.list_extend(ensure_installed, {
-        'stylua', -- Used to format Lua code
+        'stylua', -- example external tool
       })
-      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
-      require('lspconfig')['nushell'].setup { capabilities = capabilities }
-      require('mason-lspconfig').setup {
-        ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
-        automatic_installation = false,
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
-          end,
-        },
+      require('mason-tool-installer').setup {
+        ensure_installed = ensure_installed,
       }
+
+      -- =========================
+      --  Setup Mason-LSPConfig
+      -- =========================
+      --require('mason-lspconfig').setup {}
+      local mason_servers = vim.tbl_filter(function(name)
+        return name ~= 'nushell'
+      end, vim.tbl_keys(servers))
+
+      require('mason-lspconfig').setup {
+        ensure_installed = mason_servers,
+        automatic_enable = true,
+        automatic_installation = true,
+      }
+
+      --   ensure_installed = {}, -- optional, servers are handled via handlers
+      --}
+
+      -- =========================
+      --  Configure LSP Servers Dynamically
+      -- =========================
+      --      require('mason-lspconfig').setup_handlers {
+      --        -- Default handler for all servers
+      --        function(server_name)
+      --          local server = servers[server_name] or {}
+      --          server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+      --          require('lspconfig')[server_name].setup(server)
+      --        end,
+      --      }
+      --
+      -- =========================
+      --  Notes
+      -- =========================
+      -- 1. No deprecated require('lspconfig')[SERVER].setup{} calls
+      -- 2. No automatic_enable or automatic_installation fields
+      -- 3. Add additional LSP servers in the `servers` table
+      -- 4. Mason-tool-installer installs tools like stylua automatically
     end,
   },
 
@@ -808,7 +892,7 @@ require('lazy').setup({
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
           -- {
-          --   'rafamadriz/friendly-snippets',
+          'rafamadriz/friendly-snippets',
           --   config = function()
           --     require('luasnip.loaders.from_vscode').lazy_load()
           --   end,
